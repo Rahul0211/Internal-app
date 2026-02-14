@@ -45,37 +45,19 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 const Logo=({size=36})=>{const s=size/4;const c=[['#F47831','#F47831','#F16052','#F04B54'],['#F47831','#FFF','#FFF','#F05551'],['#F16052','#FFF','#F05551','#EE3C6D'],['#F04B54','#F05551','#EE3C6D','#EE3C6D']];
 return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{c.map((r,y)=>r.map((f,x)=><rect key={`${x}${y}`} x={x*s} y={y*s} width={s} height={s} fill={f}/>))}</svg>};
 
-// ── Login Screen ──
+// ── Login Screen (Sign-in only) ──
 const LoginScreen=({onAuth})=>{
-  const[mode,setMode]=useState('login');
   const[email,setEmail]=useState('');
   const[password,setPassword]=useState('');
-  const[name,setName]=useState('');
   const[error,setError]=useState('');
   const[loading,setLoading]=useState(false);
-  const[success,setSuccess]=useState('');
 
   const handleSubmit=async(e)=>{
-    e.preventDefault();setError('');setSuccess('');setLoading(true);
+    e.preventDefault();setError('');setLoading(true);
     try{
-      if(mode==='signup'){
-        if(!name.trim()){setError('Please enter your name');setLoading(false);return}
-        const{data,error:err}=await sb.auth.signUp({email,password,options:{data:{full_name:name}}});
-        if(err)throw err;
-        // Check if member exists, if not create
-        const{data:existing}=await sb.from('portal_members').select('id').eq('email',email).single();
-        if(!existing){
-          const colors=['#F47831','#F16052','#EE3C6D','#F04B54','#F05551','#c4511a','#dc2660'];
-          await sb.from('portal_members').insert({name:name.trim(),email,role:'team',avatar_color:colors[Math.floor(Math.random()*colors.length)]});
-        }
-        if(data?.user?.identities?.length===0){setError('This email is already registered. Please sign in.');setLoading(false);return}
-        if(data?.session){onAuth(data.session)}
-        else{setSuccess('Check your email for a confirmation link! After confirming, come back and sign in.');setMode('login')}
-      }else{
-        const{data,error:err}=await sb.auth.signInWithPassword({email,password});
-        if(err)throw err;
-        if(data?.session)onAuth(data.session);
-      }
+      const{data,error:err}=await sb.auth.signInWithPassword({email,password});
+      if(err)throw err;
+      if(data?.session)onAuth(data.session);
     }catch(err){setError(err.message)}
     setLoading(false);
   };
@@ -88,36 +70,26 @@ const LoginScreen=({onAuth})=>{
         <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest font-semibold">Internal Portal</p>
       </div>
       <div className="bg-white rounded-2xl shadow-xl shadow-brand-100/40 border border-gray-200 p-8 fade-in">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">{mode==='login'?'Welcome back':'Create your account'}</h2>
-        <p className="text-sm text-gray-500 mb-6">{mode==='login'?'Sign in to access the portal':'Join your team on the portal'}</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Welcome back</h2>
+        <p className="text-sm text-gray-500 mb-6">Sign in to access the portal</p>
 
         {error&&<div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium">{error}</div>}
-        {success&&<div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium">{success}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode==='signup'&&<div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-gray-700">Full Name</label>
-            <input type="text" value={name} onChange={e=>setName(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder="e.g. Rahul" required/>
-          </div>}
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-gray-700">Email</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder="you@pixeldust.in" required/>
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-gray-700">Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder={mode==='signup'?'Min 6 characters':'Enter your password'} minLength={6} required/>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder="Enter your password" minLength={6} required/>
           </div>
           <button type="submit" disabled={loading} className="w-full hg text-white font-bold py-2.5 rounded-lg shadow-md shadow-brand-200 hover:opacity-90 transition disabled:opacity-50 text-sm">
-            {loading?(mode==='login'?'Signing in...':'Creating account...'):(mode==='login'?'Sign In':'Create Account')}
+            {loading?'Signing in...':'Sign In'}
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-          {mode==='login'?
-            <p className="text-sm text-gray-500">New to Pixeldust Portal? <button onClick={()=>{setMode('signup');setError('');setSuccess('')}} className="font-bold text-brand-600 hover:text-brand-700">Create an account</button></p>
-          : <p className="text-sm text-gray-500">Already have an account? <button onClick={()=>{setMode('login');setError('');setSuccess('')}} className="font-bold text-brand-600 hover:text-brand-700">Sign in</button></p>
-          }
-        </div>
+        <p className="mt-6 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">Contact your admin if you need access</p>
       </div>
       <p className="text-center text-xs text-gray-400 mt-6 font-medium">Pixeldust Technologies — Internal Use Only</p>
     </div>
