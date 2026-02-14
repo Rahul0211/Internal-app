@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixeldust Portal</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect fill='%23F47831' width='1' height='1'/%3E%3Crect fill='%23F47831' x='1' width='1' height='1'/%3E%3Crect fill='%23F16052' x='2' width='1' height='1'/%3E%3Crect fill='%23F04B54' x='3' width='1' height='1'/%3E%3Crect fill='%23F47831' y='1' width='1' height='1'/%3E%3Crect fill='%23fff' x='1' y='1' width='1' height='1'/%3E%3Crect fill='%23fff' x='2' y='1' width='1' height='1'/%3E%3Crect fill='%23F05551' x='3' y='1' width='1' height='1'/%3E%3Crect fill='%23F16052' y='2' width='1' height='1'/%3E%3Crect fill='%23fff' x='1' y='2' width='1' height='1'/%3E%3Crect fill='%23F05551' x='2' y='2' width='1' height='1'/%3E%3Crect fill='%23EE3C6D' x='3' y='2' width='1' height='1'/%3E%3Crect fill='%23F04B54' y='3' width='1' height='1'/%3E%3Crect fill='%23F05551' x='1' y='3' width='1' height='1'/%3E%3Crect fill='%23EE3C6D' x='2' y='3' width='1' height='1'/%3E%3Crect fill='%23EE3C6D' x='3' y='3' width='1' height='1'/%3E%3C/svg%3E" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans: ['Nunito Sans','Futura','Century Gothic','sans-serif'] },
+        colors: {
+          brand:{50:'#fff7f2',100:'#ffede2',200:'#ffd6bf',300:'#ffb891',400:'#f99558',500:'#F47831',600:'#e06520',700:'#c4511a',800:'#a03f18',900:'#832f14'},
+          coral:{50:'#fff5f4',100:'#ffe8e6',200:'#ffd0cc',300:'#ffaea8',400:'#f47872',500:'#F16052',600:'#d94a3d',700:'#bd3830',800:'#9c2d28',900:'#822824'},
+          rose:{50:'#fef1f5',100:'#fee5ed',200:'#fdcedc',300:'#fcabc5',400:'#f97da5',500:'#EE3C6D',600:'#dc2660',700:'#ba1a50',800:'#9b1845',900:'#84183f'}
+        }
+      }}
+    }
+  </script>
+  <style>
+    *{scrollbar-width:thin;scrollbar-color:#ffd6bf transparent}
+    .fade-in{animation:fadeIn .3s ease-in}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .slide-in{animation:slideIn .3s ease-out}
+    @keyframes slideIn{from{opacity:0;transform:translateX(100%)}to{opacity:1;transform:translateX(0)}}
+    @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.4}}
+    .pulse-dot{animation:pulseDot 2s ease-in-out infinite}
+    .hg{background:linear-gradient(135deg,#F47831 0%,#F16052 40%,#F04B54 60%,#EE3C6D 100%)}
+  </style>
+</head>
+<body class="bg-gray-50 font-sans"><div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useMemo}=React;
+const SB_URL='https://fyidcecbriqkdgscgrtn.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5aWRjZWNicmlxa2Rnc2NncnRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5Njk2MjcsImV4cCI6MjA4NjU0NTYyN30.brrlssn2FPL0BmVMIh65tOvUzGJAoyn6zZFVLuyJXnc';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+// ── Logo ──
+const Logo=({size=36})=>{const s=size/4;const c=[['#F47831','#F47831','#F16052','#F04B54'],['#F47831','#FFF','#FFF','#F05551'],['#F16052','#FFF','#F05551','#EE3C6D'],['#F04B54','#F05551','#EE3C6D','#EE3C6D']];
+return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{c.map((r,y)=>r.map((f,x)=><rect key={`${x}${y}`} x={x*s} y={y*s} width={s} height={s} fill={f}/>))}</svg>};
+
+// ── Login Screen ──
+const LoginScreen=({onAuth})=>{
+  const[mode,setMode]=useState('login');
+  const[email,setEmail]=useState('');
+  const[password,setPassword]=useState('');
+  const[name,setName]=useState('');
+  const[error,setError]=useState('');
+  const[loading,setLoading]=useState(false);
+  const[success,setSuccess]=useState('');
+
+  const handleSubmit=async(e)=>{
+    e.preventDefault();setError('');setSuccess('');setLoading(true);
+    try{
+      if(mode==='signup'){
+        if(!name.trim()){setError('Please enter your name');setLoading(false);return}
+        const{data,error:err}=await sb.auth.signUp({email,password,options:{data:{full_name:name}}});
+        if(err)throw err;
+        // Check if member exists, if not create
+        const{data:existing}=await sb.from('portal_members').select('id').eq('email',email).single();
+        if(!existing){
+          const colors=['#F47831','#F16052','#EE3C6D','#F04B54','#F05551','#c4511a','#dc2660'];
+          await sb.from('portal_members').insert({name:name.trim(),email,role:'team',avatar_color:colors[Math.floor(Math.random()*colors.length)]});
+        }
+        if(data?.user?.identities?.length===0){setError('This email is already registered. Please sign in.');setLoading(false);return}
+        if(data?.session){onAuth(data.session)}
+        else{setSuccess('Check your email for a confirmation link! After confirming, come back and sign in.');setMode('login')}
+      }else{
+        const{data,error:err}=await sb.auth.signInWithPassword({email,password});
+        if(err)throw err;
+        if(data?.session)onAuth(data.session);
+      }
+    }catch(err){setError(err.message)}
+    setLoading(false);
+  };
+
+  return<div className="min-h-screen flex items-center justify-center p-4" style={{background:'linear-gradient(135deg,#FFF7F2 0%,#FFF5F4 30%,#fef1f5 70%,#fee5ed 100%)'}}>
+    <div className="w-full max-w-md">
+      <div className="text-center mb-8 fade-in">
+        <div className="flex justify-center mb-4"><div className="hg p-3 rounded-2xl shadow-lg shadow-brand-200/50"><Logo size={48}/></div></div>
+        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">pixeldust</h1>
+        <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest font-semibold">Internal Portal</p>
+      </div>
+      <div className="bg-white rounded-2xl shadow-xl shadow-brand-100/40 border border-gray-200 p-8 fade-in">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">{mode==='login'?'Welcome back':'Create your account'}</h2>
+        <p className="text-sm text-gray-500 mb-6">{mode==='login'?'Sign in to access the portal':'Join your team on the portal'}</p>
+
+        {error&&<div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium">{error}</div>}
+        {success&&<div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium">{success}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode==='signup'&&<div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-gray-700">Full Name</label>
+            <input type="text" value={name} onChange={e=>setName(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder="e.g. Rahul" required/>
+          </div>}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-gray-700">Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder="you@pixeldust.in" required/>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-gray-700">Password</label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition" placeholder={mode==='signup'?'Min 6 characters':'Enter your password'} minLength={6} required/>
+          </div>
+          <button type="submit" disabled={loading} className="w-full hg text-white font-bold py-2.5 rounded-lg shadow-md shadow-brand-200 hover:opacity-90 transition disabled:opacity-50 text-sm">
+            {loading?(mode==='login'?'Signing in...':'Creating account...'):(mode==='login'?'Sign In':'Create Account')}
+          </button>
+        </form>
+
+        <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+          {mode==='login'?
+            <p className="text-sm text-gray-500">New to Pixeldust Portal? <button onClick={()=>{setMode('signup');setError('');setSuccess('')}} className="font-bold text-brand-600 hover:text-brand-700">Create an account</button></p>
+          : <p className="text-sm text-gray-500">Already have an account? <button onClick={()=>{setMode('login');setError('');setSuccess('')}} className="font-bold text-brand-600 hover:text-brand-700">Sign in</button></p>
+          }
+        </div>
+      </div>
+      <p className="text-center text-xs text-gray-400 mt-6 font-medium">Pixeldust Technologies — Internal Use Only</p>
+    </div>
+  </div>
+};
+
+// ── Constants ──
+const LEAD_ST=[{key:'hot',label:'Hot',color:'bg-red-500',bg:'bg-red-50',border:'border-red-200',text:'text-red-700',dot:'bg-red-400'},{key:'warm',label:'Warm',color:'bg-brand-500',bg:'bg-brand-50',border:'border-brand-200',text:'text-brand-700',dot:'bg-brand-400'},{key:'cold',label:'Cold',color:'bg-blue-500',bg:'bg-blue-50',border:'border-blue-200',text:'text-blue-700',dot:'bg-blue-400'},{key:'discussion',label:'Discussion',color:'bg-yellow-500',bg:'bg-yellow-50',border:'border-yellow-200',text:'text-yellow-700',dot:'bg-yellow-400'},{key:'closed_won',label:'Won',color:'bg-green-500',bg:'bg-green-50',border:'border-green-200',text:'text-green-700',dot:'bg-green-400'},{key:'closed_lost',label:'Lost',color:'bg-gray-500',bg:'bg-gray-50',border:'border-gray-300',text:'text-gray-600',dot:'bg-gray-400'}];
+const PROJ_ST=[{key:'ongoing',label:'Ongoing',color:'bg-brand-500',text:'text-brand-700',bg:'bg-brand-50'},{key:'at_risk',label:'At Risk',color:'bg-coral-500',text:'text-coral-700',bg:'bg-coral-50'},{key:'paused',label:'Paused',color:'bg-yellow-500',text:'text-yellow-700',bg:'bg-yellow-50'},{key:'completed',label:'Completed',color:'bg-green-500',text:'text-green-700',bg:'bg-green-50'}];
+const TASK_ST=[{key:'todo',label:'To Do',color:'bg-gray-400',bg:'bg-gray-50',text:'text-gray-700'},{key:'in_progress',label:'In Progress',color:'bg-brand-500',bg:'bg-brand-50',text:'text-brand-700'},{key:'review',label:'Review',color:'bg-purple-500',bg:'bg-purple-50',text:'text-purple-700'},{key:'done',label:'Done',color:'bg-green-500',bg:'bg-green-50',text:'text-green-700'}];
+const MS_ST=[{key:'pending',label:'Pending',color:'bg-gray-400',bg:'bg-gray-50',text:'text-gray-700'},{key:'in_progress',label:'In Progress',color:'bg-brand-500',bg:'bg-brand-50',text:'text-brand-700'},{key:'completed',label:'Completed',color:'bg-green-500',bg:'bg-green-50',text:'text-green-700'},{key:'missed',label:'Missed',color:'bg-red-500',bg:'bg-red-50',text:'text-red-700'}];
+const NOTE_TYPES=[{key:'update',label:'Update',icon:'📝',bg:'bg-brand-50',text:'text-brand-700'},{key:'meeting',label:'Meeting',icon:'🤝',bg:'bg-blue-50',text:'text-blue-700'},{key:'decision',label:'Decision',icon:'✅',bg:'bg-green-50',text:'text-green-700'},{key:'blocker',label:'Blocker',icon:'🚫',bg:'bg-red-50',text:'text-red-700'}];
+const TEAM=['Rahul','Mohammed','Tapan','Sandip','Aadil','Suresh','Jairosh'];
+const TC={Rahul:'#F47831',Mohammed:'#F16052',Tapan:'#EE3C6D',Sandip:'#F04B54',Aadil:'#F05551',Suresh:'#c4511a',Jairosh:'#dc2660'};
+
+// ── Helpers ──
+const fmt=d=>d?new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
+const timeAgo=d=>{const s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return'just now';if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`};
+const gS=(a,k)=>a.find(s=>s.key===k)||a[0];
+const Avatar=({name,size='w-8 h-8 text-xs'})=>{const c=TC[name?.split('/')[0]?.trim()]||'#F47831';return<div className={`${size} rounded-full flex items-center justify-center text-white font-bold shrink-0`} style={{background:c}}>{(name||'?')[0].toUpperCase()}</div>};
+const Badge=({status,statuses})=>{const s=gS(statuses,status);return<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.text} ${s.border||''} border`}><span className={`w-1.5 h-1.5 rounded-full ${s.dot||s.color} ${status==='hot'?'pulse-dot':''}`}/>{s.label}</span>};
+const iC="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none transition";
+const Btn=({children,onClick,variant='primary',...p})=><button onClick={onClick} className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${variant==='primary'?'hg text-white hover:opacity-90 shadow-md shadow-brand-200':variant==='outline'?'border border-gray-300 text-gray-700 hover:bg-gray-50':'text-brand-600 hover:text-brand-700'}`} {...p}>{children}</button>;
+
+// ── Modal ──
+const Modal=({open,onClose,title,children,wide})=>{if(!open)return null;return<div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}><div className="absolute inset-0 bg-black/40 backdrop-blur-sm"/><div className={`relative bg-white rounded-2xl shadow-2xl w-full ${wide?'max-w-2xl':'max-w-lg'} max-h-[90vh] overflow-y-auto slide-in`} onClick={e=>e.stopPropagation()}><div className="sticky top-0 bg-white rounded-t-2xl border-b px-6 py-4 flex items-center justify-between z-10"><h3 className="text-lg font-bold text-gray-900">{title}</h3><button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div><div className="p-6">{children}</div></div></div>};
+const Field=({label,children})=><div className="space-y-1.5"><label className="block text-sm font-semibold text-gray-700">{label}</label>{children}</div>;
+
+// ── Lead Form ──
+const LeadForm=({lead,onSave,onClose,user})=>{
+  const[f,sF]=useState(lead||{client_name:'',project_name:'',status:'discussion',spoc:user,priority:'medium',action_item:'',notes:'',expected_value:'',expected_close_date:''});
+  const u=(k,v)=>sF(p=>({...p,[k]:v}));
+  return<div className="space-y-4">
+    <div className="grid grid-cols-2 gap-4"><Field label="Client"><input className={iC} value={f.client_name} onChange={e=>u('client_name',e.target.value)} placeholder="e.g. P&G"/></Field><Field label="Project"><input className={iC} value={f.project_name} onChange={e=>u('project_name',e.target.value)}/></Field></div>
+    <div className="grid grid-cols-2 gap-4"><Field label="Status"><select className={iC} value={f.status} onChange={e=>u('status',e.target.value)}>{LEAD_ST.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></Field><Field label="Priority"><select className={iC} value={f.priority} onChange={e=>u('priority',e.target.value)}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field></div>
+    <div className="grid grid-cols-2 gap-4"><Field label="SPOC"><input className={iC} value={f.spoc||''} onChange={e=>u('spoc',e.target.value)}/></Field><Field label="Value (₹)"><input className={iC} type="number" value={f.expected_value||''} onChange={e=>u('expected_value',e.target.value)}/></Field></div>
+    <Field label="Close Date"><input className={iC} type="date" value={f.expected_close_date||''} onChange={e=>u('expected_close_date',e.target.value)}/></Field>
+    <Field label="Action Item"><input className={iC} value={f.action_item||''} onChange={e=>u('action_item',e.target.value)}/></Field>
+    <Field label="Notes"><textarea className={iC} rows={2} value={f.notes||''} onChange={e=>u('notes',e.target.value)}/></Field>
+    <div className="flex gap-3 pt-2"><Btn onClick={()=>onSave({...f,[lead?'updated_by':'created_by']:user,updated_by:user})}>{lead?'Update Lead':'Add Lead'}</Btn><Btn variant="outline" onClick={onClose}>Cancel</Btn></div>
+  </div>};
+
+// ── Project Form ──
+const ProjectForm=({project,onSave,onClose,user})=>{
+  const[f,sF]=useState(project||{client_name:'',project_name:'',status:'ongoing',spoc:user,start_date:'',end_date:'',progress:0,remark:''});
+  const u=(k,v)=>sF(p=>({...p,[k]:v}));
+  return<div className="space-y-4">
+    <div className="grid grid-cols-2 gap-4"><Field label="Client"><input className={iC} value={f.client_name} onChange={e=>u('client_name',e.target.value)}/></Field><Field label="Project"><input className={iC} value={f.project_name} onChange={e=>u('project_name',e.target.value)}/></Field></div>
+    <div className="grid grid-cols-2 gap-4"><Field label="Status"><select className={iC} value={f.status} onChange={e=>u('status',e.target.value)}>{PROJ_ST.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></Field><Field label="SPOC"><input className={iC} value={f.spoc||''} onChange={e=>u('spoc',e.target.value)}/></Field></div>
+    <div className="grid grid-cols-2 gap-4"><Field label="Start"><input className={iC} type="date" value={f.start_date||''} onChange={e=>u('start_date',e.target.value)}/></Field><Field label="End"><input className={iC} type="date" value={f.end_date||''} onChange={e=>u('end_date',e.target.value)}/></Field></div>
+    <Field label={`Progress: ${f.progress}%`}><input type="range" min="0" max="100" value={f.progress} onChange={e=>u('progress',parseInt(e.target.value))} className="w-full" style={{accentColor:'#F47831'}}/></Field>
+    <Field label="Remark"><textarea className={iC} rows={2} value={f.remark||''} onChange={e=>u('remark',e.target.value)}/></Field>
+    <div className="flex gap-3 pt-2"><Btn onClick={()=>onSave({...f,[project?'updated_by':'created_by']:user,updated_by:user})}>{project?'Update':'Add Project'}</Btn><Btn variant="outline" onClick={onClose}>Cancel</Btn></div>
+  </div>};
+
+// ── Task Form ──
+const TaskForm=({task,onSave,onClose,user,projects,leads})=>{
+  const[f,sF]=useState(task||{title:'',description:'',status:'todo',priority:'medium',assigned_to:user,due_date:'',linked_type:'',linked_id:''});
+  const u=(k,v)=>sF(p=>({...p,[k]:v}));
+  const linked=f.linked_type==='project'?projects:f.linked_type==='lead'?leads:[];
+  return<div className="space-y-4">
+    <Field label="Task Title"><input className={iC} value={f.title} onChange={e=>u('title',e.target.value)} placeholder="What needs to be done?"/></Field>
+    <Field label="Description"><textarea className={iC} rows={2} value={f.description||''} onChange={e=>u('description',e.target.value)}/></Field>
+    <div className="grid grid-cols-3 gap-4">
+      <Field label="Status"><select className={iC} value={f.status} onChange={e=>u('status',e.target.value)}>{TASK_ST.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+      <Field label="Priority"><select className={iC} value={f.priority} onChange={e=>u('priority',e.target.value)}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></Field>
+      <Field label="Assigned To"><select className={iC} value={f.assigned_to||''} onChange={e=>u('assigned_to',e.target.value)}><option value="">Unassigned</option>{TEAM.map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <Field label="Due Date"><input className={iC} type="date" value={f.due_date||''} onChange={e=>u('due_date',e.target.value)}/></Field>
+      <Field label="Link To"><select className={iC} value={f.linked_type||''} onChange={e=>{u('linked_type',e.target.value);u('linked_id','')}}><option value="">None</option><option value="project">Project</option><option value="lead">Lead</option></select></Field>
+    </div>
+    {f.linked_type&&<Field label={`Select ${f.linked_type==='project'?'Project':'Lead'}`}><select className={iC} value={f.linked_id||''} onChange={e=>u('linked_id',e.target.value)}><option value="">— Select —</option>{linked.map(i=><option key={i.id} value={i.id}>{i.client_name} — {i.project_name}</option>)}</select></Field>}
+    <div className="flex gap-3 pt-2"><Btn onClick={()=>onSave({...f,[task?'updated_by':'created_by']:user,updated_by:user})}>{task?'Update':'Add Task'}</Btn><Btn variant="outline" onClick={onClose}>Cancel</Btn></div>
+  </div>};
+
+// ── Note Form ──
+const NoteForm=({onSave,onClose,user,projects,leads})=>{
+  const[f,sF]=useState({content:'',note_type:'update',linked_type:'',linked_id:''});
+  const u=(k,v)=>sF(p=>({...p,[k]:v}));
+  const linked=f.linked_type==='project'?projects:f.linked_type==='lead'?leads:[];
+  return<div className="space-y-4">
+    <div className="flex gap-2 mb-2">{NOTE_TYPES.map(n=><button key={n.key} onClick={()=>u('note_type',n.key)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${f.note_type===n.key?`${n.bg} ${n.text} border-current`:'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>{n.icon} {n.label}</button>)}</div>
+    <Field label="Note"><textarea className={iC} rows={4} value={f.content} onChange={e=>u('content',e.target.value)} placeholder="Write your update, meeting notes, decision, or blocker..."/></Field>
+    <div className="grid grid-cols-2 gap-4">
+      <Field label="Link To"><select className={iC} value={f.linked_type||''} onChange={e=>{u('linked_type',e.target.value);u('linked_id','')}}><option value="">None</option><option value="project">Project</option><option value="lead">Lead</option></select></Field>
+      {f.linked_type&&<Field label={`Select ${f.linked_type==='project'?'Project':'Lead'}`}><select className={iC} value={f.linked_id||''} onChange={e=>u('linked_id',e.target.value)}><option value="">— Select —</option>{linked.map(i=><option key={i.id} value={i.id}>{i.client_name} — {i.project_name}</option>)}</select></Field>}
+    </div>
+    <div className="flex gap-3 pt-2"><Btn onClick={()=>onSave({...f,created_by:user})}>Post Note</Btn><Btn variant="outline" onClick={onClose}>Cancel</Btn></div>
+  </div>};
+
+// ── Milestone Form ──
+const MilestoneForm=({ms,onSave,onClose,user,projects})=>{
+  const[f,sF]=useState(ms||{title:'',description:'',status:'pending',due_date:'',project_id:''});
+  const u=(k,v)=>sF(p=>({...p,[k]:v}));
+  return<div className="space-y-4">
+    <Field label="Milestone Title"><input className={iC} value={f.title} onChange={e=>u('title',e.target.value)} placeholder="e.g. Beta Launch"/></Field>
+    <Field label="Description"><textarea className={iC} rows={2} value={f.description||''} onChange={e=>u('description',e.target.value)}/></Field>
+    <div className="grid grid-cols-2 gap-4">
+      <Field label="Status"><select className={iC} value={f.status} onChange={e=>u('status',e.target.value)}>{MS_ST.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></Field>
+      <Field label="Due Date"><input className={iC} type="date" value={f.due_date||''} onChange={e=>u('due_date',e.target.value)}/></Field>
+    </div>
+    <Field label="Project"><select className={iC} value={f.project_id||''} onChange={e=>u('project_id',e.target.value)}><option value="">— Select Project —</option>{projects.map(p=><option key={p.id} value={p.id}>{p.client_name} — {p.project_name}</option>)}</select></Field>
+    <div className="flex gap-3 pt-2"><Btn onClick={()=>onSave({...f,[ms?'updated_by':'created_by']:user})}>{ms?'Update':'Add Milestone'}</Btn><Btn variant="outline" onClick={onClose}>Cancel</Btn></div>
+  </div>};
+
+// ── Main App ──
+const App=()=>{
+  const[session,setSession]=useState(null);
+  const[authLoading,setAuthLoading]=useState(true);
+  const[tab,setTab]=useState('dashboard');
+  const[leads,setLeads]=useState([]);
+  const[projects,setProjects]=useState([]);
+  const[tasks,setTasks]=useState([]);
+  const[notes,setNotes]=useState([]);
+  const[milestones,setMilestones]=useState([]);
+  const[activities,setActivities]=useState([]);
+  const[user,setUser]=useState('');
+  const[userEmail,setUserEmail]=useState('');
+  const[modal,setModal]=useState(null);
+  const[leadView,setLeadView]=useState('pipeline');
+  const[loading,setLoading]=useState(true);
+  const[toast,setToast]=useState(null);
+  const show=(m,t='success')=>{setToast({m,t});setTimeout(()=>setToast(null),3000)};
+
+  // ── Auth state listener ──
+  useEffect(()=>{
+    sb.auth.getSession().then(({data:{session:s}})=>{
+      setSession(s);
+      if(s){
+        const em=s.user.email;
+        const nm=s.user.user_metadata?.full_name||em.split('@')[0];
+        setUserEmail(em);setUser(nm);
+      }
+      setAuthLoading(false);
+    });
+    const{data:{subscription}}=sb.auth.onAuthStateChange((_event,s)=>{
+      setSession(s);
+      if(s){
+        const em=s.user.email;
+        const nm=s.user.user_metadata?.full_name||em.split('@')[0];
+        setUserEmail(em);setUser(nm);
+      }else{setUser('');setUserEmail('')}
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  // Resolve user name from portal_members when session is set
+  useEffect(()=>{
+    if(!userEmail)return;
+    sb.from('portal_members').select('name').eq('email',userEmail).single().then(({data})=>{
+      if(data?.name)setUser(data.name);
+    });
+  },[userEmail]);
+
+  const handleAuth=(s)=>{setSession(s)};
+  const handleLogout=async()=>{await sb.auth.signOut();setSession(null);setUser('');setUserEmail('')};
+
+  const fetchAll=useCallback(async()=>{
+    const[l,p,t,n,ms,a]=await Promise.all([
+      sb.from('portal_leads').select('*').order('created_at',{ascending:false}),
+      sb.from('portal_projects').select('*').order('client_name'),
+      sb.from('portal_tasks').select('*').order('created_at',{ascending:false}),
+      sb.from('portal_notes').select('*').order('created_at',{ascending:false}),
+      sb.from('portal_milestones').select('*').order('due_date'),
+      sb.from('portal_activity').select('*').order('created_at',{ascending:false}).limit(50)
+    ]);
+    if(l.data)setLeads(l.data);if(p.data)setProjects(p.data);if(t.data)setTasks(t.data);
+    if(n.data)setNotes(n.data);if(ms.data)setMilestones(ms.data);if(a.data)setActivities(a.data);
+    setLoading(false);
+  },[]);
+
+  useEffect(()=>{if(session)fetchAll()},[session,fetchAll]);
+  useEffect(()=>{
+    if(!session)return;
+    const ch=sb.channel('portal-all')
+      .on('postgres_changes',{event:'*',schema:'public',table:'portal_leads'},()=>fetchAll())
+      .on('postgres_changes',{event:'*',schema:'public',table:'portal_projects'},()=>fetchAll())
+      .on('postgres_changes',{event:'*',schema:'public',table:'portal_tasks'},()=>fetchAll())
+      .on('postgres_changes',{event:'*',schema:'public',table:'portal_notes'},()=>fetchAll())
+      .on('postgres_changes',{event:'*',schema:'public',table:'portal_milestones'},()=>fetchAll())
+      .on('postgres_changes',{event:'*',schema:'public',table:'portal_activity'},()=>fetchAll())
+      .subscribe();
+    return()=>{sb.removeChannel(ch)};
+  },[session,fetchAll]);
+
+  const log=async(et,eid,action,details)=>sb.from('portal_activity').insert({entity_type:et,entity_id:eid,action,details,performed_by:user});
+
+  // CRUD helpers
+  const saveLead=async f=>{const e=!!f.id;if(e){const{id,created_at,...r}=f;await sb.from('portal_leads').update(r).eq('id',id);await log('lead',id,`updated lead "${f.client_name}"`,`Status: ${f.status}`);show('Lead updated!')}else{const{data}=await sb.from('portal_leads').insert(f).select().single();if(data)await log('lead',data.id,`added lead "${f.client_name}"`,`Status: ${f.status}`);show('Lead added!')}setModal(null);fetchAll()};
+  const delLead=async id=>{const l=leads.find(x=>x.id===id);await sb.from('portal_activity').delete().eq('entity_id',id);await sb.from('portal_leads').delete().eq('id',id);if(l)await log('lead',id,`removed lead "${l.client_name}"`,'');show('Lead removed','i');fetchAll()};
+
+  const saveProject=async f=>{const e=!!f.id;if(e){const{id,created_at,...r}=f;await sb.from('portal_projects').update(r).eq('id',id);await log('project',id,`updated "${f.client_name}"`,`Progress: ${f.progress}%`);show('Project updated!')}else{const{data}=await sb.from('portal_projects').insert(f).select().single();if(data)await log('project',data.id,`added project "${f.client_name}"`,'');show('Project added!')}setModal(null);fetchAll()};
+  const delProject=async id=>{const p=projects.find(x=>x.id===id);await sb.from('portal_milestones').delete().eq('project_id',id);await sb.from('portal_activity').delete().eq('entity_id',id);await sb.from('portal_projects').delete().eq('id',id);if(p)await log('project',id,`removed "${p.client_name}"`,'');show('Removed','i');fetchAll()};
+
+  const saveTask=async f=>{const e=!!f.id;if(e){const{id,created_at,...r}=f;await sb.from('portal_tasks').update(r).eq('id',id);await log('task',id,`updated task "${f.title}"`,`Status: ${f.status}`);show('Task updated!')}else{const{data}=await sb.from('portal_tasks').insert(f).select().single();if(data)await log('task',data.id,`created task "${f.title}"`,`Assigned: ${f.assigned_to||'none'}`);show('Task added!')}setModal(null);fetchAll()};
+  const delTask=async id=>{await sb.from('portal_tasks').delete().eq('id',id);show('Task removed','i');fetchAll()};
+  const toggleTask=async(id,st)=>{const ns=st==='done'?'todo':'done';await sb.from('portal_tasks').update({status:ns,updated_by:user}).eq('id',id);fetchAll()};
+
+  const saveNote=async f=>{const{data}=await sb.from('portal_notes').insert(f).select().single();if(data)await log('note',data.id,`posted ${f.note_type} note`,f.content.substring(0,60));show('Note posted!');setModal(null);fetchAll()};
+  const delNote=async id=>{await sb.from('portal_notes').delete().eq('id',id);show('Note removed','i');fetchAll()};
+
+  const saveMs=async f=>{const e=!!f.id;if(e){const{id,created_at,...r}=f;await sb.from('portal_milestones').update(r).eq('id',id);show('Milestone updated!')}else{await sb.from('portal_milestones').insert(f);show('Milestone added!')}setModal(null);fetchAll()};
+  const delMs=async id=>{await sb.from('portal_milestones').delete().eq('id',id);show('Milestone removed','i');fetchAll()};
+
+  const linkName=(type,id)=>{const list=type==='project'?projects:leads;const item=list.find(x=>x.id===id);return item?`${item.client_name}`:'—'};
+
+  const tabs=[
+    {key:'dashboard',label:'Dashboard',icon:'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'},
+    {key:'leads',label:'Leads',icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'},
+    {key:'projects',label:'Projects',icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'},
+    {key:'tasks',label:'Tasks',icon:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {key:'notes',label:'Notes',icon:'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'},
+    {key:'activity',label:'Activity',icon:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'},
+  ];
+
+  // ── Auth loading state ──
+  if(authLoading)return<div className="flex items-center justify-center h-screen bg-gray-50"><div className="flex flex-col items-center gap-4"><Logo size={48}/><div className="flex gap-1">{['#F47831','#F16052','#F04B54','#EE3C6D'].map((c,i)=><div key={i} className="w-2 h-2 rounded-full animate-bounce" style={{background:c,animationDelay:`${i*.15}s`}}/>)}</div></div></div>;
+
+  // ── Show login if not authenticated ──
+  if(!session)return<LoginScreen onAuth={handleAuth}/>;
+
+  // ── Data loading state ──
+  if(loading)return<div className="flex items-center justify-center h-screen bg-gray-50"><div className="flex flex-col items-center gap-4"><Logo size={48}/><div className="flex gap-1">{['#F47831','#F16052','#F04B54','#EE3C6D'].map((c,i)=><div key={i} className="w-2 h-2 rounded-full animate-bounce" style={{background:c,animationDelay:`${i*.15}s`}}/>)}</div><p className="text-sm text-gray-500 font-semibold">Loading portal...</p></div></div>;
+
+  return<div className="min-h-screen bg-gray-50">
+    {toast&&<div className={`fixed top-4 right-4 z-[60] px-4 py-2.5 rounded-lg shadow-lg text-sm font-bold text-white slide-in ${toast.t==='success'?'bg-green-500':'bg-gray-700'}`}>{toast.m}</div>}
+
+    {/* Header */}
+    <header className="hg sticky top-0 z-40 shadow-lg shadow-brand-200/30"><div className="max-w-7xl mx-auto px-4 sm:px-6"><div className="flex items-center justify-between h-16">
+      <div className="flex items-center gap-3"><div className="bg-white/20 rounded-lg p-1 backdrop-blur-sm"><Logo size={32}/></div><div><h1 className="text-lg font-extrabold text-white tracking-tight">pixeldust</h1><p className="text-[10px] text-white/70 -mt-0.5 uppercase tracking-widest font-semibold">Internal Portal</p></div></div>
+      <div className="flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-green-300 pulse-dot"/>Live Sync</div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2"><Avatar name={user} size="w-7 h-7 text-[10px]"/><div className="hidden sm:block"><p className="text-sm font-bold text-white leading-tight">{user}</p><p className="text-[10px] text-white/60">{userEmail}</p></div></div>
+          <button onClick={handleLogout} className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/30 transition" title="Sign out">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <span className="hidden sm:inline">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div></div></header>
+
+    {/* Nav */}
+    <nav className="bg-white border-b shadow-sm overflow-x-auto"><div className="max-w-7xl mx-auto px-4 sm:px-6"><div className="flex items-center gap-1 -mb-px">
+      {tabs.map(t=><button key={t.key} onClick={()=>setTab(t.key)} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition whitespace-nowrap ${tab===t.key?'border-brand-500 text-brand-600':'border-transparent text-gray-500 hover:text-gray-700'}`}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.icon}/></svg>{t.label}
+        {t.key==='tasks'&&tasks.filter(x=>x.status!=='done').length>0&&<span className="ml-1 bg-brand-100 text-brand-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{tasks.filter(x=>x.status!=='done').length}</span>}
+      </button>)}
+    </div></div></nav>
+
+    {/* Content */}
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+
+    {/* ── DASHBOARD ── */}
+    {tab==='dashboard'&&<>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {[{l:'Hot Leads',v:leads.filter(x=>x.status==='hot').length,i:'🔥',g:'from-red-500 to-brand-500'},{l:'Pipeline',v:leads.filter(x=>!['closed_won','closed_lost'].includes(x.status)).length,i:'📊',g:'from-brand-500 to-rose-500'},{l:'Active Projects',v:projects.filter(x=>x.status==='ongoing').length,i:'⚡',g:'from-brand-500 to-coral-500'},{l:'Open Tasks',v:tasks.filter(x=>x.status!=='done').length,i:'📋',g:'from-brand-400 to-yellow-400'},{l:'Won Deals',v:leads.filter(x=>x.status==='closed_won').length,i:'🎉',g:'from-green-500 to-emerald-500'},{l:'Milestones Due',v:milestones.filter(x=>x.status==='pending').length,i:'🎯',g:'from-coral-400 to-rose-500'}].map((s,i)=>
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all fade-in" style={{animationDelay:`${i*50}ms`}}><div className="flex items-center justify-between mb-2"><span className="text-2xl">{s.i}</span><span className={`text-3xl font-extrabold bg-gradient-to-r ${s.g} bg-clip-text text-transparent`}>{s.v}</span></div><p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{s.l}</p></div>
+        )}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* My Tasks */}
+          <div><h2 className="text-lg font-bold text-gray-900 mb-3">My Tasks</h2>
+            <div className="bg-white rounded-xl border border-gray-200 divide-y">{tasks.filter(t=>t.assigned_to===user&&t.status!=='done').slice(0,5).length===0?<div className="p-4 text-sm text-gray-400 text-center">No open tasks assigned to you</div>:tasks.filter(t=>t.assigned_to===user&&t.status!=='done').slice(0,5).map(t=>
+              <div key={t.id} className="px-4 py-3 flex items-center gap-3 hover:bg-brand-50/30 transition">
+                <button onClick={()=>toggleTask(t.id,t.status)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition ${t.status==='done'?'bg-green-500 border-green-500':'border-gray-300 hover:border-brand-500'}`}>{t.status==='done'&&<svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}</button>
+                <div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900 truncate">{t.title}</p>{t.linked_type&&<p className="text-xs text-gray-400">{linkName(t.linked_type,t.linked_id)}</p>}</div>
+                {t.priority==='high'&&<span className="text-[10px] font-bold bg-coral-100 text-coral-600 px-1.5 py-0.5 rounded">HIGH</span>}
+                {t.due_date&&<span className="text-xs text-gray-400">{fmt(t.due_date)}</span>}
+              </div>
+            )}</div>
+          </div>
+          {/* Active Projects */}
+          <div><div className="flex items-center justify-between mb-3"><h2 className="text-lg font-bold text-gray-900">Active Projects</h2><button onClick={()=>setTab('projects')} className="text-sm text-brand-600 font-semibold">View all →</button></div>
+            <div className="bg-white rounded-xl border border-gray-200 divide-y">{projects.filter(p=>p.status==='ongoing').slice(0,5).map(p=>
+              <div key={p.id} className="px-4 py-3 flex items-center gap-4 hover:bg-brand-50/30 transition"><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900 truncate">{p.client_name} — {p.project_name}</p>{p.spoc&&<p className="text-xs text-gray-400">{p.spoc}</p>}</div><div className="w-32"><div className="bg-gray-100 rounded-full h-2 overflow-hidden"><div className="h-full rounded-full" style={{width:`${p.progress||0}%`,background:'linear-gradient(90deg,#F47831,#F16052)'}}/></div></div><span className="text-xs font-bold text-gray-500 w-10 text-right">{p.progress||0}%</span></div>
+            )}</div>
+          </div>
+        </div>
+        {/* Activity Feed */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="px-5 py-4 border-b" style={{background:'linear-gradient(135deg,#FFF7F2,#FFF5F4)'}}><h3 className="text-sm font-bold text-gray-700">Recent Activity</h3></div>
+          <div className="divide-y max-h-[500px] overflow-y-auto">{activities.length===0?<div className="px-5 py-8 text-center text-sm text-gray-400">No activity yet</div>:activities.slice(0,20).map(a=>
+            <div key={a.id} className="px-5 py-3 hover:bg-brand-50/30 transition"><div className="flex items-start gap-3"><Avatar name={a.performed_by} size="w-7 h-7 text-[10px]"/><div className="flex-1 min-w-0"><p className="text-sm text-gray-700"><span className="font-bold">{a.performed_by}</span> {a.action}</p>{a.details&&<p className="text-xs text-gray-400 mt-0.5 truncate">{a.details}</p>}</div><span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(a.created_at)}</span></div></div>
+          )}</div>
+        </div>
+      </div>
+    </>}
+
+    {/* ── LEADS ── */}
+    {tab==='leads'&&<>
+      <div className="flex items-center justify-between mb-6"><div><h2 className="text-xl font-extrabold text-gray-900">Leads Pipeline</h2><p className="text-sm text-gray-500 mt-0.5">{leads.length} total leads</p></div>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-100 rounded-lg p-1"><button onClick={()=>setLeadView('pipeline')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${leadView==='pipeline'?'bg-white shadow text-gray-900':'text-gray-500'}`}>Pipeline</button><button onClick={()=>setLeadView('table')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${leadView==='table'?'bg-white shadow text-gray-900':'text-gray-500'}`}>Table</button></div>
+          <Btn onClick={()=>setModal({t:'lead'})}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Add Lead</Btn>
+        </div>
+      </div>
+      {leadView==='pipeline'?
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">{LEAD_ST.map(col=>{const items=leads.filter(l=>l.status===col.key);return<div key={col.key} className="bg-gray-100/80 rounded-xl p-3 min-h-[200px]"><div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${col.color}`}/><span className="text-sm font-bold text-gray-700">{col.label}</span></div><span className="text-xs font-bold text-gray-400 bg-white px-2 py-0.5 rounded-full">{items.length}</span></div><div className="space-y-2">{items.map(l=><div key={l.id} className={`bg-white rounded-lg p-3 border ${col.border||'border-gray-200'} hover:shadow-md transition cursor-pointer group fade-in`} onClick={()=>setModal({t:'lead',d:l})}><div className="flex items-start justify-between mb-1"><h4 className="text-sm font-bold text-gray-900">{l.client_name}</h4><button onClick={e=>{e.stopPropagation();delLead(l.id)}} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div><p className="text-xs text-gray-500 mb-2">{l.project_name}</p>{l.priority==='high'&&<span className="text-[10px] font-bold bg-coral-100 text-coral-600 px-1.5 py-0.5 rounded mr-1">HIGH</span>}{l.expected_value&&<span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded">₹{Number(l.expected_value).toLocaleString('en-IN')}</span>}{l.action_item&&<p className="text-[11px] text-brand-600 mt-2 font-semibold">→ {l.action_item}</p>}{l.spoc&&<div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100"><Avatar name={l.spoc} size="w-5 h-5 text-[9px]"/><span className="text-[10px] text-gray-400">{l.spoc}</span></div>}</div>)}</div></div>})}</div>
+      : <div className="bg-white rounded-xl border overflow-hidden"><table className="w-full text-sm"><thead><tr className="border-b" style={{background:'linear-gradient(135deg,#FFF7F2,#FFF5F4)'}}><th className="text-left px-4 py-3 font-bold text-gray-600">Client</th><th className="text-left px-4 py-3 font-bold text-gray-600">Project</th><th className="text-left px-4 py-3 font-bold text-gray-600">Status</th><th className="text-left px-4 py-3 font-bold text-gray-600">SPOC</th><th className="text-left px-4 py-3 font-bold text-gray-600">Value</th><th className="text-right px-4 py-3 font-bold text-gray-600">Actions</th></tr></thead><tbody>{leads.map(l=><tr key={l.id} className="border-b last:border-0 hover:bg-brand-50/40 transition"><td className="px-4 py-3 font-bold text-gray-900">{l.client_name}</td><td className="px-4 py-3 text-gray-600">{l.project_name}</td><td className="px-4 py-3"><Badge status={l.status} statuses={LEAD_ST}/></td><td className="px-4 py-3"><div className="flex items-center gap-2">{l.spoc&&<Avatar name={l.spoc} size="w-6 h-6 text-[9px]"/>}<span className="text-gray-600">{l.spoc||'—'}</span></div></td><td className="px-4 py-3 text-gray-600">{l.expected_value?`₹${Number(l.expected_value).toLocaleString('en-IN')}`:'—'}</td><td className="px-4 py-3 text-right"><button onClick={()=>setModal({t:'lead',d:l})} className="p-1.5 rounded-lg hover:bg-brand-50 text-gray-400 hover:text-brand-600">Edit</button></td></tr>)}</tbody></table></div>
+      }
+    </>}
+
+    {/* ── PROJECTS ── */}
+    {tab==='projects'&&<>
+      <div className="flex items-center justify-between mb-6"><div><h2 className="text-xl font-extrabold text-gray-900">Projects</h2><p className="text-sm text-gray-500 mt-0.5">{projects.length} projects — {projects.filter(p=>p.status==='ongoing').length} active</p></div>
+        <div className="flex gap-2"><Btn onClick={()=>setModal({t:'milestone'})}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Milestone</Btn><Btn onClick={()=>setModal({t:'project'})}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Project</Btn></div>
+      </div>
+      <div className="space-y-3">{projects.map(p=>{
+        const pMs=milestones.filter(m=>m.project_id===p.id);
+        return<div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg transition-all fade-in group">
+          <div className="flex items-start justify-between mb-3"><div className="flex-1"><div className="flex items-center gap-3 mb-1"><h4 className="text-base font-bold text-gray-900">{p.client_name}</h4><Badge status={p.status} statuses={PROJ_ST}/></div><p className="text-sm text-gray-500">{p.project_name}</p></div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition"><button onClick={()=>setModal({t:'project',d:p})} className="p-2 rounded-lg hover:bg-brand-50 text-gray-400 hover:text-brand-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onClick={()=>delProject(p.id)} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+          </div>
+          <div className="flex items-center gap-6 mb-3">{p.spoc&&<div className="flex items-center gap-2"><Avatar name={p.spoc} size="w-6 h-6 text-[9px]"/><span className="text-sm text-gray-600">{p.spoc}</span></div>}<span className="text-sm text-gray-500">{p.start_date?fmt(p.start_date):'No start'} — {p.end_date?fmt(p.end_date):'No deadline'}</span></div>
+          <div className="flex items-center gap-3 mb-2"><div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden"><div className="h-full rounded-full transition-all" style={{width:`${p.progress||0}%`,background:p.status==='at_risk'?'#F16052':p.status==='completed'?'#22c55e':'linear-gradient(90deg,#F47831,#F16052)'}}/></div><span className="text-sm font-bold text-gray-600 w-10 text-right">{p.progress||0}%</span></div>
+          {p.remark&&<p className="text-sm text-gray-500 bg-brand-50 rounded-lg px-3 py-2 border-l-2 border-brand-400 mb-2">{p.remark}</p>}
+          {pMs.length>0&&<div className="mt-3 pt-3 border-t border-gray-100"><p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Milestones</p><div className="space-y-1.5">{pMs.map(m=>
+            <div key={m.id} className="flex items-center gap-3 text-sm group/ms">
+              <span className={`w-2 h-2 rounded-full ${gS(MS_ST,m.status).color}`}/>
+              <span className={`font-medium ${m.status==='completed'?'text-gray-400 line-through':'text-gray-700'}`}>{m.title}</span>
+              <Badge status={m.status} statuses={MS_ST}/>
+              {m.due_date&&<span className="text-xs text-gray-400 ml-auto">{fmt(m.due_date)}</span>}
+              <button onClick={()=>setModal({t:'milestone',d:m})} className="opacity-0 group-hover/ms:opacity-100 text-xs text-brand-500 hover:text-brand-700">edit</button>
+              <button onClick={()=>delMs(m.id)} className="opacity-0 group-hover/ms:opacity-100 text-xs text-red-400 hover:text-red-600">×</button>
+            </div>
+          )}</div></div>}
+        </div>
+      })}</div>
+    </>}
+
+    {/* ── TASKS ── */}
+    {tab==='tasks'&&<>
+      <div className="flex items-center justify-between mb-6"><div><h2 className="text-xl font-extrabold text-gray-900">Tasks</h2><p className="text-sm text-gray-500 mt-0.5">{tasks.filter(x=>x.status!=='done').length} open — {tasks.filter(x=>x.status==='done').length} done</p></div>
+        <Btn onClick={()=>setModal({t:'task'})}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Add Task</Btn>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">{TASK_ST.map(col=>{const items=tasks.filter(t=>t.status===col.key);return<div key={col.key} className="bg-gray-100/80 rounded-xl p-3 min-h-[150px]">
+        <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${col.color}`}/><span className="text-sm font-bold text-gray-700">{col.label}</span></div><span className="text-xs font-bold text-gray-400 bg-white px-2 py-0.5 rounded-full">{items.length}</span></div>
+        <div className="space-y-2">{items.map(t=>
+          <div key={t.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:shadow-md transition cursor-pointer group fade-in" onClick={()=>setModal({t:'task',d:t})}>
+            <div className="flex items-start justify-between mb-1"><h4 className="text-sm font-bold text-gray-900 leading-tight">{t.title}</h4><button onClick={e=>{e.stopPropagation();delTask(t.id)}} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+            {t.description&&<p className="text-xs text-gray-500 mb-2 line-clamp-2">{t.description}</p>}
+            {t.priority==='high'&&<span className="text-[10px] font-bold bg-coral-100 text-coral-600 px-1.5 py-0.5 rounded mr-1">HIGH</span>}
+            {t.linked_type&&<span className="text-[10px] font-medium bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded">{linkName(t.linked_type,t.linked_id)}</span>}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+              {t.assigned_to&&<div className="flex items-center gap-1"><Avatar name={t.assigned_to} size="w-5 h-5 text-[9px]"/><span className="text-[10px] text-gray-400">{t.assigned_to}</span></div>}
+              {t.due_date&&<span className="text-[10px] text-gray-400">{fmt(t.due_date)}</span>}
+            </div>
+          </div>
+        )}</div>
+      </div>})}</div>
+    </>}
+
+    {/* ── NOTES ── */}
+    {tab==='notes'&&<>
+      <div className="flex items-center justify-between mb-6"><div><h2 className="text-xl font-extrabold text-gray-900">Notes & Updates</h2><p className="text-sm text-gray-500 mt-0.5">{notes.length} notes</p></div>
+        <Btn onClick={()=>setModal({t:'note'})}><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Post Note</Btn>
+      </div>
+      <div className="space-y-3">{notes.length===0?<div className="bg-white rounded-xl border p-8 text-center text-gray-400">No notes yet. Post your first update!</div>:notes.map(n=>{
+        const nt=NOTE_TYPES.find(x=>x.key===n.note_type)||NOTE_TYPES[0];
+        return<div key={n.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition fade-in group">
+          <div className="flex items-start gap-3">
+            <Avatar name={n.created_by} size="w-9 h-9 text-xs"/>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-sm font-bold text-gray-900">{n.created_by}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${nt.bg} ${nt.text}`}>{nt.icon} {nt.label}</span>
+                {n.linked_type&&<span className="text-[10px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{n.linked_type==='project'?'📁':'👤'} {linkName(n.linked_type,n.linked_id)}</span>}
+                <span className="text-xs text-gray-400 ml-auto">{timeAgo(n.created_at)}</span>
+                <button onClick={()=>delNote(n.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{n.content}</p>
+            </div>
+          </div>
+        </div>
+      })}</div>
+    </>}
+
+    {/* ── ACTIVITY ── */}
+    {tab==='activity'&&<>
+      <div className="mb-6"><h2 className="text-xl font-extrabold text-gray-900">Activity Feed</h2><p className="text-sm text-gray-500 mt-0.5">All updates across the portal</p></div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="divide-y">{activities.length===0?<div className="px-5 py-8 text-center text-sm text-gray-400">No activity yet</div>:activities.map(a=>
+        <div key={a.id} className="px-5 py-3 hover:bg-brand-50/30 transition fade-in"><div className="flex items-start gap-3"><Avatar name={a.performed_by} size="w-7 h-7 text-[10px]"/><div className="flex-1 min-w-0"><p className="text-sm text-gray-700"><span className="font-bold">{a.performed_by}</span> {a.action}</p>{a.details&&<p className="text-xs text-gray-400 mt-0.5 truncate">{a.details}</p>}</div><span className="text-xs text-gray-400 whitespace-nowrap">{timeAgo(a.created_at)}</span></div></div>
+      )}</div></div>
+    </>}
+
+    </main>
+
+    <footer className="border-t bg-white mt-12"><div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between"><div className="flex items-center gap-2"><Logo size={20}/><span className="text-xs text-gray-400 font-semibold">Pixeldust Technologies — Internal Portal</span></div><span className="text-xs text-gray-300">Built with love by the PD team</span></div></footer>
+
+    {/* Modals */}
+    <Modal open={modal?.t==='lead'} onClose={()=>setModal(null)} title={modal?.d?'Edit Lead':'Add New Lead'}><LeadForm lead={modal?.d} onSave={saveLead} onClose={()=>setModal(null)} user={user}/></Modal>
+    <Modal open={modal?.t==='project'} onClose={()=>setModal(null)} title={modal?.d?'Edit Project':'Add Project'}><ProjectForm project={modal?.d} onSave={saveProject} onClose={()=>setModal(null)} user={user}/></Modal>
+    <Modal open={modal?.t==='task'} onClose={()=>setModal(null)} title={modal?.d?'Edit Task':'Add Task'}><TaskForm task={modal?.d} onSave={saveTask} onClose={()=>setModal(null)} user={user} projects={projects} leads={leads}/></Modal>
+    <Modal open={modal?.t==='note'} onClose={()=>setModal(null)} title="Post Note"><NoteForm onSave={saveNote} onClose={()=>setModal(null)} user={user} projects={projects} leads={leads}/></Modal>
+    <Modal open={modal?.t==='milestone'} onClose={()=>setModal(null)} title={modal?.d?'Edit Milestone':'Add Milestone'}><MilestoneForm ms={modal?.d} onSave={saveMs} onClose={()=>setModal(null)} user={user} projects={projects}/></Modal>
+  </div>
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>
